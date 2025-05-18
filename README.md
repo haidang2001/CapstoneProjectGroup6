@@ -3,6 +3,9 @@ Section 1 Group 6
 
 Group Members:
 Cao Hai Dang Nguyen, github: haidang2001
+Jensen Jacob George, github: Jensen-Jacob
+Nancy Pankajkumar Vachheta, github: Nancyvachheta 
+
 
 Project Details
 Project Name: 
@@ -30,3 +33,13 @@ Users can track their location
 Data Source Type and Label:
 Multi User Input: User specific inputs including reporting of stops being not in use and bus crowdedness.
 3rd-Party API: Bus details from LTC's openly available API and Google Maps API
+
+Nancy Pankajkumar Vachheta, github: Nancyvachheta 
+Users can Show live bus and route on map
+Users can Refresh live bus data
+Users can Recently viewed stops
+Users can an (animated) splash screen when starting the app
+Single-user input: data (recently viewed stops) is stored locally or optionally to Firebase 
+3rd-Party API: Bus details from LTC's openly available API and Google Maps API
+
+
