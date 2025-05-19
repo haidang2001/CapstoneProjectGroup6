@@ -20,3 +20,13 @@ Users can User feedback form
 Data Source Type and Label:
 Easy, Single-user input: All data (favorites, theme, and feedback) is stored locally or optionally to Firebase and used only by the device’s owner.
 Medium, 3rd-Party API: The app uses GTFS or GTFS-RT (public transit schedule/vehicle location) from London Transit
+
+Jensen Jacob George, github: Jensen-Jacob
+Features:
+Users can report potential stop not in use
+Users can see bus arrival times
+Users can report whether bus is crowded or not
+Users can track their location
+Data Source Type and Label:
+Multi User Input: User specific inputs including reporting of stops being not in use and bus crowdedness.
+3rd-Party API: Bus details from LTC's openly available API and Google Maps API
