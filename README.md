@@ -41,5 +41,21 @@ Users can Recently viewed stops
 Users can an (animated) splash screen when starting the app
 Single-user input: data (recently viewed stops) is stored locally or optionally to Firebase 
 3rd-Party API: Bus details from LTC's openly available API and Google Maps API
+# London Transit Companion 🚌
+**A public transit app for London, Ontario**  
 
+
+[![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
+[![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
+| Feature                | Implemented By       | Data Source                          |
+|------------------------|----------------------|--------------------------------------|
+| Live bus map           | @Nancyvachheta       | LTC API + Google Maps                |
+| Route search           | @haidang2001         | GTFS/GTFS-RT (LTC)                   |
+| Crowd reporting        | @Jensen-Jacob        | Firebase (user input)                |
+| Dark mode toggle       | @haidang2001         | Local storage                        |
+| Animated splash screen | @Nancyvachheta       | Lottie animations                    |
+
+   ```bash
+   git clone https://github.com/haidang2001/CapstoneProjectGroup6.git
+   cd CapstoneProjectGroup6
 
