@@ -3,8 +3,9 @@ import { View, StyleSheet, Text, ActivityIndicator, Alert, TouchableOpacity, Pla
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import Constants from 'expo-constants';
+import BottomNav from '../components/BottomNav';
 
-export default function LiveBusMapScreen() {
+export default function LiveBusMapScreen({ navigation }) {
   const [busData, setBusData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
@@ -133,7 +134,7 @@ export default function LiveBusMapScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1 }}>
       <MapView
         style={styles.map}
         initialRegion={{
@@ -167,6 +168,7 @@ export default function LiveBusMapScreen() {
           {loading ? 'Updating...' : `${busData.length} buses nearby`}
         </Text>
       </View>
+      <BottomNav navigation={navigation} current="LiveBusMap" />
     </View>
   );
 }
