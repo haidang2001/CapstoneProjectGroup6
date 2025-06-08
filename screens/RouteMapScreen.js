@@ -115,15 +115,24 @@ export default function RouteMapScreen({ route, navigation }) {
             title={Platform.OS === 'android' ? stop.name : undefined}
             description={Platform.OS === 'android' ? `Stop #${idx + 1}` : undefined}
           >
-            
-            
-            <Callout>
-            
-              <View style={{ backgroundColor: 'white', padding: 10, borderRadius: 5, minWidth: 80, minHeight: 40 }}>
+            {Platform.OS === 'ios' && (
+              <Callout tooltip={false}>
+                 <View style={{ backgroundColor: 'white', padding: 10, borderRadius: 5, minWidth: 80, minHeight: 40 }}>
                 <Text style={{ fontWeight: 'bold', color: 'black' }}>{stop.name}</Text>
                 <Text style={{ color: 'black' }}>Stop #{idx + 1}</Text>
               </View>
-            </Callout>
+              </Callout>
+            )}
+            
+            {/* <Callout>
+            <Text style={{ color: 'black' }}>
+    {`Stop: ${stop.name}\n#${idx + 1}`}
+  </Text> */}
+              {/* <View style={{ backgroundColor: 'white', padding: 10, borderRadius: 5, minWidth: 80, minHeight: 40 }}>
+                <Text style={{ fontWeight: 'bold', color: 'black' }}>{stop.name}</Text>
+                <Text style={{ color: 'black' }}>Stop #{idx + 1}</Text>
+              </View> */}
+            {/* </Callout> */}
           </Marker>
         ))}
       </MapView>
