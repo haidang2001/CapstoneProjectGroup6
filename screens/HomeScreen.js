@@ -6,19 +6,19 @@ const cardData = [
   {
     title: 'Route Search',
     description: 'Find the best route to your destination.',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
+    image: require('../assets/bus-route.png'),
     onPress: 'Route',
   },
   {
     title: 'Favorite Stops',
     description: 'Keep track of your favorite stops.',
-    image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80',
+    image: require('../assets/bus-stop.png'),
     onPress: 'FavoriteStops',
   },
   {
     title: 'Live Map',
     description: 'See where your bus is in real time.',
-    image: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80',
+    image: require('../assets/bus-map.png'),
     onPress: 'LiveBusMap',
   },
 ];
@@ -41,7 +41,7 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.cardTitle}>{card.title}</Text>
                 <Text style={styles.cardDesc}>{card.description}</Text>
               </View>
-              <Image source={{ uri: card.image }} style={styles.cardImage} />
+              <Image source={card.image}  style={styles.cardImage} />
             </TouchableOpacity>
           ))}
         </View>
@@ -109,5 +109,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginLeft: 16,
     backgroundColor: '#eee',
+
+    // width: '100%',
+  // aspectRatio: 16 / 9,
+  resizeMode: 'contain',
   },
 }); 
