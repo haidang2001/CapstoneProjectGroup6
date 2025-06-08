@@ -6,10 +6,41 @@ import RouteScreen from './screens/RouteScreen';
 import FavoriteStopsScreen from './screens/FavoriteStopsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import FeedbackScreen from './screens/FeedbackScreen';
+import SplashScreenComponent from './screens/SplashScreen';
+import * as SplashScreen from 'expo-splash-screen';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import RouteMapScreen from './screens/RouteMapScreen';
 
 const Stack = createStackNavigator();
-
+// Prevent native splash screen from auto-hiding
+// SplashScreen.preventAutoHideAsync();
 export default function App() {
+  const [appIsReady, setAppIsReady] = useState(false);
+
+  useEffect(() => {
+    async function prepare() {
+      try {
+        // Pre-load any resources here (fonts, API calls, etc.)
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate loading
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        setAppIsReady(true);
+        await SplashScreen.hideAsync();
+      }
+    }
+
+    prepare();
+  }, []);
+
+  if (!appIsReady) {
+    return (
+      <View style={styles.container}>
+        <SplashScreenComponent />
+      </View>
+    );
+  }
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
@@ -22,6 +53,11 @@ export default function App() {
           name="Route" 
           component={RouteScreen}
           options={{ title: 'Route Search' }}
+        />
+        <Stack.Screen 
+          name="RouteMap" 
+          component={RouteMapScreen}
+          options={{ headerShown: false }}
         />
         <Stack.Screen 
           name="FavoriteStops" 
@@ -47,3 +83,12 @@ export default function App() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
