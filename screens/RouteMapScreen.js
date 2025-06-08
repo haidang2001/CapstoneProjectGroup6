@@ -7,6 +7,7 @@ import trips from '../assets/trips.json';
 import stopTimes from '../assets/stop_times.json';
 import stops from '../assets/stops.json';
 import shapes from '../assets/shapes.json';
+import { Platform } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -111,14 +112,13 @@ export default function RouteMapScreen({ route, navigation }) {
           <Marker
             key={stop.stop_id}
             coordinate={{ latitude: parseFloat(stop.lat), longitude: parseFloat(stop.lon) }}
-            title={stop.name}
-            description={`Stop #${idx + 1}`}
-            tracksViewChanges={false}
-            zIndex={999}
-            flat={true}
-            onCalloutPress={() => {}}
+            title={Platform.OS === 'android' ? stop.name : undefined}
+            description={Platform.OS === 'android' ? `Stop #${idx + 1}` : undefined}
           >
+            
+            
             <Callout>
+            
               <View style={{ backgroundColor: 'white', padding: 10, borderRadius: 5, minWidth: 80, minHeight: 40 }}>
                 <Text style={{ fontWeight: 'bold', color: 'black' }}>{stop.name}</Text>
                 <Text style={{ color: 'black' }}>Stop #{idx + 1}</Text>
