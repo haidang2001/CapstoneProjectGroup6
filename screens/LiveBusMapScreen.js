@@ -1,64 +1,88 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
-import * as Location from 'expo-location';
-import Constants from 'expo-constants';
-import { MaterialIcons } from '@expo/vector-icons'; // For the location button icon
-import stops from '../assets/stops.json'; // Import stop data
+import React, { useEffect, useState, useRef } from "react";
+import {
+  View,
+  StyleSheet,
+  Text,
+  ActivityIndicator,
+  TouchableOpacity,
+  Modal,
+  TouchableWithoutFeedback,
+} from "react-native";
+import MapView, { Marker } from "react-native-maps";
+import * as Location from "expo-location";
+import { MaterialIcons } from "@expo/vector-icons";
+import stops from "../assets/stops.json";
+import { ensureRecentData, getCachedArrivals } from "../services/arrivalTimes";
 
-export default function LiveBusMapScreen({ navigation }) {
+export default function LiveBusMapScreen() {
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [nearbyStops, setNearbyStops] = useState([]);
-  const mapRef = useRef(null); // Add ref for MapView
+  const [selectedStop, setSelectedStop] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const mapRef = useRef(null);
 
-  // Haversine formula to calculate distance between two lat/lon points
+  const handleStopPress = async (stop) => {
+  setSelectedStop(null); // Clear the previous stop and force spinner
+  setModalVisible(true);
+
+  const arrivals = await fetchArrivalTimesForStop(stop.stop_id);
+  setSelectedStop({ ...stop, arrivals });
+};
+
+
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371e3; // metres
-    const φ1 = lat1 * Math.PI / 180; // φ, λ in radians
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const R = 6371e3;
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    const d = R * c; // in metres
-    return d; // distance in meters
+    return R * c;
+  };
+
+  const fetchArrivalTimesForStop = async (stopId) => {
+    await ensureRecentData(); // Refresh if needed
+    return getCachedArrivals(stopId); // Get arrivals from cached data
   };
 
   const fetchLocationAndNearbyStops = async () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        throw new Error('Permission to access location was denied');
+      if (status !== "granted") {
+        throw new Error("Permission to access location was denied");
       }
 
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
         timeout: 15000,
       });
+
       const currentUserLocation = location.coords;
       setUserLocation(currentUserLocation);
 
-      // Animate map to current location if ref is available
-      if (mapRef.current && currentUserLocation) {
-        mapRef.current.animateToRegion({
-          latitude: currentUserLocation.latitude,
-          longitude: currentUserLocation.longitude,
-          latitudeDelta: 0.005, // Closer zoom
-          longitudeDelta: 0.005, // Closer zoom
-        }, 1000); // Animation duration
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(
+          {
+            latitude: currentUserLocation.latitude,
+            longitude: currentUserLocation.longitude,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          },
+          1000
+        );
       }
 
-      // Filter stops within a reasonable radius (e.g., 2000 meters = 2 km)
-      const radius = 2000; 
-      const filtered = stops.filter(stop => {
+      const radius = 2000;
+      const filtered = stops.filter((stop) => {
         const distance = calculateDistance(
           currentUserLocation.latitude,
           currentUserLocation.longitude,
@@ -67,11 +91,11 @@ export default function LiveBusMapScreen({ navigation }) {
         );
         return distance <= radius;
       });
-      setNearbyStops(filtered);
 
+      setNearbyStops(filtered);
     } catch (err) {
       setError(err.message);
-      setUserLocation(null); // Clear location if error
+      setUserLocation(null);
     } finally {
       setLoading(false);
     }
@@ -81,11 +105,19 @@ export default function LiveBusMapScreen({ navigation }) {
     fetchLocationAndNearbyStops();
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      ensureRecentData(); // Refresh cache silently in background
+    }, 60000); // Every 60 seconds
+
+    return () => clearInterval(interval); // Cleanup
+  }, []);
+
   if (error) {
     return (
       <View style={styles.centeredContainer}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.retryButton}
           onPress={fetchLocationAndNearbyStops}
         >
@@ -107,7 +139,7 @@ export default function LiveBusMapScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <MapView
-        ref={mapRef} // Assign the ref
+        ref={mapRef}
         style={styles.map}
         initialRegion={{
           latitude: userLocation.latitude,
@@ -115,25 +147,81 @@ export default function LiveBusMapScreen({ navigation }) {
           latitudeDelta: 0.02,
           longitudeDelta: 0.02,
         }}
-        showsUserLocation={true}
-        showsMyLocationButton={false} // Will use custom button instead
-        zoomEnabled={true}
-        scrollEnabled={true}
+        showsUserLocation
+        showsMyLocationButton={false}
+        zoomEnabled
+        scrollEnabled
       >
         {nearbyStops.map((stop) => (
           <Marker
             key={stop.stop_id}
-            coordinate={{ latitude: parseFloat(stop.lat), longitude: parseFloat(stop.lon) }}
-            title={stop.name} // Display stop name
+            coordinate={{
+              latitude: parseFloat(stop.lat),
+              longitude: parseFloat(stop.lon),
+            }}
+            title={stop.name}
             description={`Stop ID: ${stop.stop_id}`}
+            onPress={() => handleStopPress(stop)}
           >
             <View style={styles.stopMarker} />
           </Marker>
         ))}
       </MapView>
 
-      {/* Locate Me Button */}
-      <TouchableOpacity 
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "flex-end",
+              backgroundColor: "transparent",
+            }}
+          >
+            <TouchableWithoutFeedback>
+              <View
+                style={{
+                  backgroundColor: "white",
+                  padding: 20,
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                }}
+              >
+                <Text
+                  style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}
+                >
+                  Arrival Times for {selectedStop?.name}
+                </Text>
+
+                {selectedStop?.arrivals ? (
+                  selectedStop.arrivals.length > 0 ? (
+                    selectedStop.arrivals.map((arrival, index) => (
+                      <Text key={index}>
+                        🚌 Route {arrival.route} → {arrival.time} (
+                        {arrival.inMinutes} min)
+                      </Text>
+                    ))
+                  ) : (
+                    <Text>No upcoming buses in the next hour.</Text>
+                  )
+                ) : (
+                  <ActivityIndicator size="small" color="#007bff" />
+                )}
+
+                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                  <Text style={{ color: "blue", marginTop: 20 }}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      <TouchableOpacity
         style={styles.locateButton}
         onPress={fetchLocationAndNearbyStops}
       >
@@ -147,57 +235,53 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  stopMarker: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "green", // Changed to green
+    borderWidth: 2,
+    borderColor: "white",
+  },
   map: {
     flex: 1,
   },
   centeredContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#555',
+    color: "#555",
   },
   errorText: {
     fontSize: 16,
-    color: 'red',
-    textAlign: 'center',
+    color: "red",
+    textAlign: "center",
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
     padding: 10,
     borderRadius: 5,
   },
   retryText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  stopMarker: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'green', // Changed to green
-    borderWidth: 2,
-    borderColor: 'white',
+    color: "white",
+    fontWeight: "bold",
   },
   locateButton: {
-    position: 'absolute',
-    bottom: 100, // Adjust as needed to avoid overlap with bottom system gestures
+    position: "absolute",
+    bottom: 100,
     right: 20,
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
     borderRadius: 30,
     width: 60,
     height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
 });
