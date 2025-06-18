@@ -9,9 +9,7 @@ export default function SettingsScreen({ navigation }) {
       <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Feedback')}>
         <Text style={styles.buttonText}>💬 Feedback</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button}>
-        <Text style={styles.buttonText}>⚙️ Settings</Text>
-      </TouchableOpacity>
+      
       <BottomNav navigation={navigation} current="Settings" />
     </View>
   );
