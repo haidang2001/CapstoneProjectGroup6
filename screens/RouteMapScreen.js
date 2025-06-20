@@ -22,12 +22,10 @@ export default function RouteMapScreen({ route, navigation }) {
     // 1. Find the route
     const r = routes.find(r => r.id === routeId || r.route_id === routeId);
     setRouteData(r);
-    console.log('Selected route:', r);
     if (!r) return;
 
     // 2. Find a trip for this route (use the first one)
     const trip = trips.find(t => t.route_id === routeId || t.route_id === r.route_id || t.route_id === r.id);
-    console.log('Selected trip:', trip);
     if (!trip) return;
 
     // 3. Get the shape points for this trip
@@ -39,7 +37,6 @@ export default function RouteMapScreen({ route, navigation }) {
             longitude: pt.lon
           }))
       : [];
-    console.log('Shape points:', shapePoints);
 
     setPolylineCoords(shapePoints);
 
@@ -47,11 +44,9 @@ export default function RouteMapScreen({ route, navigation }) {
     const times = stopTimes
       .filter(st => st.trip_id === trip.trip_id)
       .sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence));
-    console.log('Stop times:', times);
 
     // 5. Get stop details for each stop_time
     const stopsForRoute = times.map(st => stops.find(s => s.stop_id === st.stop_id)).filter(Boolean);
-    console.log('Stops for route:', stopsForRoute);
     if (stopsForRoute.length > 0) {
       console.log('First stop coordinates:', stopsForRoute[0].lat, stopsForRoute[0].lon,stopsForRoute[0].name);
       console.log('Parsed first stop coordinates:', parseFloat(stopsForRoute[0].lat), parseFloat(stopsForRoute[0].lon));

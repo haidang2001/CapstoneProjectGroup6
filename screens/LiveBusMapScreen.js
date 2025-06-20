@@ -13,6 +13,7 @@ import * as Location from "expo-location";
 import { MaterialIcons } from "@expo/vector-icons";
 import stops from "../assets/stops.json";
 import { ensureRecentData, getCachedArrivals } from "../services/arrivalTimes";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LiveBusMapScreen() {
   const [loading, setLoading] = useState(true);
@@ -22,15 +23,15 @@ export default function LiveBusMapScreen() {
   const [selectedStop, setSelectedStop] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const mapRef = useRef(null);
+  const [favoriteStops, setFavoriteStops] = useState([]);
 
   const handleStopPress = async (stop) => {
-  setSelectedStop(null); // Clear the previous stop and force spinner
-  setModalVisible(true);
+    setSelectedStop(null); // Clear the previous stop and force spinner
+    setModalVisible(true);
 
-  const arrivals = await fetchArrivalTimesForStop(stop.stop_id);
-  setSelectedStop({ ...stop, arrivals });
-};
-
+    const arrivals = await fetchArrivalTimesForStop(stop.stop_id);
+    setSelectedStop({ ...stop, arrivals });
+  };
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
@@ -113,6 +114,30 @@ export default function LiveBusMapScreen() {
     return () => clearInterval(interval); // Cleanup
   }, []);
 
+  useEffect(() => {
+    // Load favorite stops from AsyncStorage
+    const loadFavorites = async () => {
+      try {
+        const favs = await AsyncStorage.getItem('favoriteStops');
+        if (favs) setFavoriteStops(JSON.parse(favs));
+      } catch {}
+    };
+    loadFavorites();
+  }, []);
+
+  const isFavorite = (stopId) => favoriteStops.includes(stopId);
+
+  const toggleFavorite = async (stop) => {
+    let updatedFavorites;
+    if (isFavorite(stop.stop_id)) {
+      updatedFavorites = favoriteStops.filter(id => id !== stop.stop_id);
+    } else {
+      updatedFavorites = [...favoriteStops, stop.stop_id];
+    }
+    setFavoriteStops(updatedFavorites);
+    await AsyncStorage.setItem('favoriteStops', JSON.stringify(updatedFavorites));
+  };
+
   if (error) {
     return (
       <View style={styles.centeredContainer}>
@@ -191,11 +216,20 @@ export default function LiveBusMapScreen() {
                   borderTopRightRadius: 20,
                 }}
               >
-                <Text
-                  style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}
-                >
-                  Arrival Times for {selectedStop?.name}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                  <Text style={{ fontSize: 18, fontWeight: "bold", flex: 1 }}>
+                    Arrival Times for {selectedStop?.name}
+                  </Text>
+                  {selectedStop && (
+                    <TouchableOpacity onPress={() => toggleFavorite(selectedStop)}>
+                      <MaterialIcons
+                        name={isFavorite(selectedStop.stop_id) ? 'favorite' : 'favorite-border'}
+                        size={28}
+                        color={isFavorite(selectedStop.stop_id) ? 'red' : '#aaa'}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
 
                 {selectedStop?.arrivals ? (
                   selectedStop.arrivals.length > 0 ? (
