@@ -21,7 +21,7 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Pre-load any resources here (fonts, API calls, etc.)
+        // Pre-load any resources (fonts, API calls, etc.)
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate loading
       } catch (e) {
         console.warn(e);
