@@ -15,7 +15,7 @@ import stops from "../assets/stops.json";
 import { ensureRecentData, getCachedArrivals } from "../services/arrivalTimes";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function LiveBusMapScreen() {
+export default function LiveBusMapScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
   const [error, setError] = useState("");
@@ -54,6 +54,10 @@ export default function LiveBusMapScreen() {
   };
 
   const fetchLocationAndNearbyStops = async () => {
+    // If a stop is passed via navigation, we don't fetch user location initially.
+    if (route.params?.stop) {
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -125,6 +129,40 @@ export default function LiveBusMapScreen() {
     loadFavorites();
   }, []);
 
+  useEffect(() => {
+    // This effect handles when a user navigates from the FavoriteStopsScreen
+    const stopFromNav = route.params?.stop;
+    if (stopFromNav) {
+      const region = {
+        latitude: parseFloat(stopFromNav.lat),
+        longitude: parseFloat(stopFromNav.lon),
+      };
+      
+      // Set the location to the stop's location to center the map and bypass the loading screen
+      setUserLocation(region);
+
+      // Pan map to the stop and open the modal
+      if (mapRef.current) {
+        mapRef.current.animateToRegion({ ...region, latitudeDelta: 0.005, longitudeDelta: 0.005 }, 1000);
+      }
+      handleStopPress(stopFromNav);
+
+      // Also load nearby stops around the favorite stop
+      const radius = 2000;
+      const filtered = stops.filter((stop) => {
+        const distance = calculateDistance(
+          region.latitude,
+          region.longitude,
+          parseFloat(stop.lat),
+          parseFloat(stop.lon)
+        );
+        return distance <= radius;
+      });
+      setNearbyStops(filtered);
+      setLoading(false);
+    }
+  }, [route.params?.stop]);
+
   const isFavorite = (stopId) => favoriteStops.includes(stopId);
 
   const toggleFavorite = async (stop) => {
@@ -176,6 +214,19 @@ export default function LiveBusMapScreen() {
         showsMyLocationButton={false}
         zoomEnabled
         scrollEnabled
+        onMapReady={() => {
+          // This ensures that if we navigate from favorites, we can animate to the region
+          const stopFromNav = route.params?.stop;
+          if (stopFromNav) {
+            const region = {
+              latitude: parseFloat(stopFromNav.lat),
+              longitude: parseFloat(stopFromNav.lon),
+              latitudeDelta: 0.005,
+              longitudeDelta: 0.005,
+            };
+            mapRef.current.animateToRegion(region, 1000);
+          }
+        }}
       >
         {nearbyStops.map((stop) => (
           <Marker
@@ -185,10 +236,12 @@ export default function LiveBusMapScreen() {
               longitude: parseFloat(stop.lon),
             }}
             title={stop.name}
-            description={`Stop ID: ${stop.stop_id}`}
             onPress={() => handleStopPress(stop)}
           >
-            <View style={styles.stopMarker} />
+            <View style={[
+              styles.stopMarker,
+              { backgroundColor: isFavorite(stop.stop_id) ? 'red' : 'green' }
+            ]} />
           </Marker>
         ))}
       </MapView>
@@ -257,7 +310,11 @@ export default function LiveBusMapScreen() {
 
       <TouchableOpacity
         style={styles.locateButton}
-        onPress={fetchLocationAndNearbyStops}
+        onPress={() => {
+          // Clear route params to allow re-centering on the user
+          navigation.setParams({ stop: null });
+          fetchLocationAndNearbyStops();
+        }}
       >
         <MaterialIcons name="my-location" size={24} color="white" />
       </TouchableOpacity>
@@ -273,7 +330,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "green", // Changed to green
+    // The backgroundColor is now set dynamically
     borderWidth: 2,
     borderColor: "white",
   },

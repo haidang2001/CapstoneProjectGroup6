@@ -43,15 +43,16 @@ export default function FavoriteStopsScreen({ navigation }) {
           data={favoriteStopObjs}
           keyExtractor={item => item.stop_id}
           renderItem={({ item }) => (
-            <View style={styles.stopRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.stopName}>{item.name}</Text>
-                <Text style={styles.stopId}>ID: {item.stop_id}</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('LiveBusMap', { stop: item })}>
+              <View style={styles.stopRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.stopName}>{item.name}</Text>
+                </View>
+                <TouchableOpacity onPress={() => removeFavorite(item.stop_id)}>
+                  <MaterialIcons name="delete" size={24} color="#d00" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => removeFavorite(item.stop_id)}>
-                <MaterialIcons name="delete" size={24} color="#d00" />
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           )}
           contentContainerStyle={{ paddingBottom: 80 }}
         />
