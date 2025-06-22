@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   Modal,
   TouchableWithoutFeedback,
+  Animated,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import stops from "../assets/stops.json";
 import { ensureRecentData, getCachedArrivals } from "../services/arrivalTimes";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,13 +23,15 @@ export default function LiveBusMapScreen({ route, navigation }) {
   const [nearbyStops, setNearbyStops] = useState([]);
   const [selectedStop, setSelectedStop] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const mapRef = useRef(null);
   const [favoriteStops, setFavoriteStops] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState("Never refreshed");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const mapRef = useRef(null);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const handleStopPress = async (stop) => {
-    setSelectedStop(null); // Clear the previous stop and force spinner
+    setSelectedStop(null);
     setModalVisible(true);
-
     const arrivals = await fetchArrivalTimesForStop(stop.stop_id);
     setSelectedStop({ ...stop, arrivals });
   };
@@ -49,22 +52,45 @@ export default function LiveBusMapScreen({ route, navigation }) {
   };
 
   const fetchArrivalTimesForStop = async (stopId) => {
-    await ensureRecentData(); // Refresh if needed
-    return getCachedArrivals(stopId); // Get arrivals from cached data
+    await ensureRecentData();
+    return getCachedArrivals(stopId);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0.5, duration: 200, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
+
+    try {
+      await ensureRecentData(true);
+      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      
+      if (selectedStop) {
+        const arrivals = await fetchArrivalTimesForStop(selectedStop.stop_id);
+        setSelectedStop({ ...selectedStop, arrivals });
+      }
+      
+      if (!route.params?.stop) {
+        await fetchLocationAndNearbyStops();
+      }
+    } catch (err) {
+      console.error("Refresh failed:", err);
+      setLastUpdated("Refresh failed");
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const fetchLocationAndNearbyStops = async () => {
-    // If a stop is passed via navigation, we don't fetch user location initially.
-    if (route.params?.stop) {
-      return;
-    }
+    if (route.params?.stop) return;
+    
     setLoading(true);
     setError("");
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        throw new Error("Permission to access location was denied");
-      }
+      if (status !== "granted") throw new Error("Permission to access location was denied");
 
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
@@ -98,6 +124,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
       });
 
       setNearbyStops(filtered);
+      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     } catch (err) {
       setError(err.message);
       setUserLocation(null);
@@ -112,14 +139,12 @@ export default function LiveBusMapScreen({ route, navigation }) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      ensureRecentData(); // Refresh cache silently in background
-    }, 60000); // Every 60 seconds
-
-    return () => clearInterval(interval); // Cleanup
+      ensureRecentData();
+    }, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    // Load favorite stops from AsyncStorage
     const loadFavorites = async () => {
       try {
         const favs = await AsyncStorage.getItem('favoriteStops');
@@ -130,7 +155,6 @@ export default function LiveBusMapScreen({ route, navigation }) {
   }, []);
 
   useEffect(() => {
-    // This effect handles when a user navigates from the FavoriteStopsScreen
     const stopFromNav = route.params?.stop;
     if (stopFromNav) {
       const region = {
@@ -138,16 +162,13 @@ export default function LiveBusMapScreen({ route, navigation }) {
         longitude: parseFloat(stopFromNav.lon),
       };
       
-      // Set the location to the stop's location to center the map and bypass the loading screen
       setUserLocation(region);
 
-      // Pan map to the stop and open the modal
       if (mapRef.current) {
         mapRef.current.animateToRegion({ ...region, latitudeDelta: 0.005, longitudeDelta: 0.005 }, 1000);
       }
       handleStopPress(stopFromNav);
 
-      // Also load nearby stops around the favorite stop
       const radius = 2000;
       const filtered = stops.filter((stop) => {
         const distance = calculateDistance(
@@ -201,6 +222,14 @@ export default function LiveBusMapScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
+      {/* Last Updated Timestamp */}
+      <Animated.View style={[styles.timestampContainer, { opacity: fadeAnim }]}>
+        <Ionicons name="time-outline" size={16} color="white" />
+        <Text style={styles.timestampText}>Updated: {lastUpdated}</Text>
+        {isRefreshing && <ActivityIndicator size="small" color="white" style={styles.refreshSpinner} />}
+      </Animated.View>
+
+      {/* Map View */}
       <MapView
         ref={mapRef}
         style={styles.map}
@@ -215,7 +244,6 @@ export default function LiveBusMapScreen({ route, navigation }) {
         zoomEnabled
         scrollEnabled
         onMapReady={() => {
-          // This ensures that if we navigate from favorites, we can animate to the region
           const stopFromNav = route.params?.stop;
           if (stopFromNav) {
             const region = {
@@ -246,6 +274,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
         ))}
       </MapView>
 
+      {/* Stop Info Modal */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -253,24 +282,11 @@ export default function LiveBusMapScreen({ route, navigation }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
-          <View
-            style={{
-              flex: 1,
-              justifyContent: "flex-end",
-              backgroundColor: "transparent",
-            }}
-          >
+          <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View
-                style={{
-                  backgroundColor: "white",
-                  padding: 20,
-                  borderTopLeftRadius: 20,
-                  borderTopRightRadius: 20,
-                }}
-              >
+              <View style={styles.modalContent}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                  <Text style={{ fontSize: 18, fontWeight: "bold", flex: 1 }}>
+                  <Text style={styles.modalTitle}>
                     Arrival Times for {selectedStop?.name}
                   </Text>
                   {selectedStop && (
@@ -299,24 +315,52 @@ export default function LiveBusMapScreen({ route, navigation }) {
                   <ActivityIndicator size="small" color="#007bff" />
                 )}
 
-                <TouchableOpacity onPress={() => setModalVisible(false)}>
-                  <Text style={{ color: "blue", marginTop: 20 }}>Close</Text>
-                </TouchableOpacity>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={styles.refreshButton}
+                    onPress={handleRefresh}
+                    disabled={isRefreshing}
+                  >
+                    <Ionicons 
+                      name="refresh" 
+                      size={20} 
+                      color={isRefreshing ? "#aaa" : "#007AFF"} 
+                    />
+                    <Text style={styles.refreshButtonText}>Refresh</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity onPress={() => setModalVisible(false)}>
+                    <Text style={styles.closeButtonText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
 
+      {/* Location Button */}
       <TouchableOpacity
         style={styles.locateButton}
         onPress={() => {
-          // Clear route params to allow re-centering on the user
           navigation.setParams({ stop: null });
           fetchLocationAndNearbyStops();
         }}
       >
         <MaterialIcons name="my-location" size={24} color="white" />
+      </TouchableOpacity>
+
+      {/* Refresh Button */}
+      <TouchableOpacity
+        style={styles.floatingRefresh}
+        onPress={handleRefresh}
+        disabled={isRefreshing}
+      >
+        <Ionicons 
+          name="refresh" 
+          size={24} 
+          color={isRefreshing ? "#aaa" : "white"} 
+        />
       </TouchableOpacity>
     </View>
   );
@@ -326,16 +370,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  map: {
+    flex: 1,
+  },
+  timestampContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 10,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  timestampText: {
+    color: 'white',
+    marginLeft: 5,
+    fontSize: 14,
+  },
+  refreshSpinner: {
+    marginLeft: 10,
+  },
   stopMarker: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    // The backgroundColor is now set dynamically
     borderWidth: 2,
     borderColor: "white",
-  },
-  map: {
-    flex: 1,
   },
   centeredContainer: {
     flex: 1,
@@ -363,16 +427,60 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  refreshButtonText: {
+    color: '#007AFF',
+    marginLeft: 8,
+  },
+  closeButtonText: {
+    color: 'blue',
+  },
   locateButton: {
-    position: "absolute",
-    bottom: 100,
+    position: 'absolute',
+    bottom: 30,
     right: 20,
-    backgroundColor: "#007bff",
-    borderRadius: 30,
-    width: 60,
-    height: 60,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#007bff',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+  },
+  floatingRefresh: {
+    position: 'absolute',
+    bottom: 90,
+    right: 20,
+    backgroundColor: '#007bff',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 5,
   },
 });
