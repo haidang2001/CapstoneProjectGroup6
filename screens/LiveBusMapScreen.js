@@ -286,6 +286,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                  {/* Arrival Times Section */}
                   <Text style={styles.modalTitle}>
                     Arrival Times for {selectedStop?.name}
                   </Text>
