@@ -340,7 +340,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Location Button */}
+      {/* Current Location Button */}
       <TouchableOpacity
         style={styles.locateButton}
         onPress={() => {
