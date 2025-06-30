@@ -352,7 +352,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
       </TouchableOpacity>
 
       {/* Refresh Button */}
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={styles.floatingRefresh}
         onPress={handleRefresh}
         disabled={isRefreshing}
@@ -362,7 +362,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
           size={24} 
           color={isRefreshing ? "#aaa" : "white"} 
         />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 }
