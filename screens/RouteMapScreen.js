@@ -19,8 +19,9 @@ export default function RouteMapScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [busPositions, setBusPositions] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [tripId, setTripId] = useState(null);
 
-  // Fetch real-time bus positions for this route
+  // Fetch real-time bus positions for this route and trip
   const fetchBusPositions = async () => {
     setRefreshing(true);
     try {
@@ -44,13 +45,26 @@ export default function RouteMapScreen({ route, navigation }) {
     setRouteData(r);
     if (!r) return;
 
-    // 2. Find a trip for this route (use the first one)
-    const trip = trips.find(t => t.route_id === routeId || t.route_id === r.route_id || t.route_id === r.id);
-    if (!trip) return;
+    // 2. Find all trips for this route
+    const routeTrips = trips.filter(t => t.route_id === routeId || t.route_id === r.route_id || t.route_id === r.id);
+    if (!routeTrips.length) return;
 
-    // 3. Get the shape points for this trip
-    const shapePoints = Array.isArray(shapes[trip.shape_id])
-      ? shapes[trip.shape_id]
+    // 3. Pick the trip with the longest shape (most shape points)
+    let longestTrip = null;
+    let maxPoints = 0;
+    for (const trip of routeTrips) {
+      const shapeArr = Array.isArray(shapes[trip.shape_id]) ? shapes[trip.shape_id] : [];
+      if (shapeArr.length > maxPoints) {
+        maxPoints = shapeArr.length;
+        longestTrip = trip;
+      }
+    }
+    if (!longestTrip) return;
+    setTripId(longestTrip.trip_id);
+
+    // 4. Get the shape points for this trip
+    const shapePoints = Array.isArray(shapes[longestTrip.shape_id])
+      ? shapes[longestTrip.shape_id]
           .sort((a, b) => a.sequence - b.sequence)
           .map(pt => ({
             latitude: pt.lat,
@@ -60,12 +74,12 @@ export default function RouteMapScreen({ route, navigation }) {
 
     setPolylineCoords(shapePoints);
 
-    // 4. Get stop_times for this trip, ordered by stop_sequence
+    // 5. Get stop_times for this trip, ordered by stop_sequence
     const times = stopTimes
-      .filter(st => st.trip_id === trip.trip_id)
+      .filter(st => st.trip_id === longestTrip.trip_id)
       .sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence));
 
-    // 5. Get stop details for each stop_time
+    // 6. Get stop details for each stop_time
     const stopsForRoute = times.map(st => stops.find(s => s.stop_id === st.stop_id)).filter(Boolean);
     if (stopsForRoute.length > 0) {
       console.log('First stop coordinates:', stopsForRoute[0].lat, stopsForRoute[0].lon,stopsForRoute[0].name);
