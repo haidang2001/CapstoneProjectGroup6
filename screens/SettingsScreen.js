@@ -5,7 +5,7 @@ import BottomNav from '../components/BottomNav';
 export default function SettingsScreen({ navigation }) {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
+      {/* <Text style={styles.title}>Settings</Text> */}
       <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Feedback')}>
         <Text style={styles.buttonText}>Feedback Form</Text>
       </TouchableOpacity>

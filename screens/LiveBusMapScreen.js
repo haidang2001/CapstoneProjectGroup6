@@ -8,6 +8,7 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Animated,
+  Image,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
@@ -28,6 +29,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const mapRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  // Remove bus position state, fetch, and markers
 
   const handleStopPress = async (stop) => {
     setSelectedStop(null);
@@ -133,6 +135,8 @@ export default function LiveBusMapScreen({ route, navigation }) {
     }
   };
 
+  // Remove bus position state, fetch, and markers
+
   useEffect(() => {
     fetchLocationAndNearbyStops();
   }, []);
@@ -183,6 +187,8 @@ export default function LiveBusMapScreen({ route, navigation }) {
       setLoading(false);
     }
   }, [route.params?.stop]);
+
+  // Remove bus position state, fetch, and markers
 
   const isFavorite = (stopId) => favoriteStops.includes(stopId);
 
@@ -272,6 +278,8 @@ export default function LiveBusMapScreen({ route, navigation }) {
             ]} />
           </Marker>
         ))}
+        {/* Bus Markers */}
+        {/* Remove bus position state, fetch, and markers */}
       </MapView>
 
       {/* Stop Info Modal */}

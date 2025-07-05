@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions, Alert, Image } from 'react-native';
 import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import routes from '../assets/routes.json';
@@ -17,6 +17,26 @@ export default function RouteMapScreen({ route, navigation }) {
   const [routeStops, setRouteStops] = useState([]);
   const [polylineCoords, setPolylineCoords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [busPositions, setBusPositions] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Fetch real-time bus positions for this route
+  const fetchBusPositions = async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetch('http://gtfs.ltconline.ca/Vehicle/VehiclePositions.json');
+      const data = await response.json();
+      // Filter buses by routeId (route_id in vehicle.trip)
+      const filtered = (data?.entity || []).filter(
+        bus => bus.vehicle?.trip?.route_id === routeId || bus.vehicle?.trip?.route_id === String(routeId)
+      );
+      setBusPositions(filtered);
+    } catch (error) {
+      console.error('Failed to fetch bus positions:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     // 1. Find the route
@@ -55,6 +75,10 @@ export default function RouteMapScreen({ route, navigation }) {
     setRouteStops(stopsForRoute);
 
     setLoading(false);
+  }, [routeId]);
+
+  useEffect(() => {
+    fetchBusPositions();
   }, [routeId]);
 
   if (loading || !routeData) {
@@ -105,7 +129,7 @@ export default function RouteMapScreen({ route, navigation }) {
         )}
         {routeStops.map((stop, idx) => (
           <Marker
-            key={stop.stop_id}
+            key={`${stop.stop_id}_${idx}`}
             coordinate={{ latitude: parseFloat(stop.lat), longitude: parseFloat(stop.lon) }}
             title={Platform.OS === 'android' ? stop.name : undefined}
             description={Platform.OS === 'android' ? `Stop #${idx + 1}` : undefined}
@@ -118,19 +142,36 @@ export default function RouteMapScreen({ route, navigation }) {
               </View>
               </Callout>
             )}
-            
-            {/* <Callout>
-            <Text style={{ color: 'black' }}>
-    {`Stop: ${stop.name}\n#${idx + 1}`}
-  </Text> */}
-              {/* <View style={{ backgroundColor: 'white', padding: 10, borderRadius: 5, minWidth: 80, minHeight: 40 }}>
-                <Text style={{ fontWeight: 'bold', color: 'black' }}>{stop.name}</Text>
-                <Text style={{ color: 'black' }}>Stop #{idx + 1}</Text>
-              </View> */}
-            {/* </Callout> */}
           </Marker>
         ))}
+        {/* Bus Markers */}
+        {busPositions.map((bus, idx) => (
+          bus.vehicle?.position && (
+            <Marker
+              key={`${bus.id || bus.vehicle.vehicle.id}_${idx}`}
+              coordinate={{
+                latitude: bus.vehicle.position.latitude,
+                longitude: bus.vehicle.position.longitude,
+              }}
+              title={`Bus ${bus.vehicle.vehicle.id}`}
+            >
+              <Image source={require('../assets/bus-stop.png')} style={{ width: 32, height: 32 }} />
+            </Marker>
+          )
+        ))}
       </MapView>
+      {/* Floating Refresh Button */}
+      <TouchableOpacity
+        style={styles.floatingRefresh}
+        onPress={fetchBusPositions}
+        disabled={refreshing}
+      >
+        {refreshing ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Ionicons name="refresh" size={28} color="#fff" />
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -178,5 +219,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  floatingRefresh: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    backgroundColor: '#007bff',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
 }); 

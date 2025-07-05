@@ -35,7 +35,7 @@ export default function FavoriteStopsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Favorite Stops</Text>
+      {/* <Text style={styles.title}>Favorite Stops</Text> */}
       {favoriteStopObjs.length === 0 ? (
         <Text style={styles.emptyText}>No favorite stops yet.</Text>
       ) : (
