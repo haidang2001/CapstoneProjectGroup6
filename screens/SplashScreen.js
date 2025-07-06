@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import LottieView from 'lottie-react-native';
-//you can animate your screen
+
+// Splash screen component with Lottie animation
+// Displays bus animation and calls callback when complete
 export default function AppSplashScreen({ onAnimationFinish }) {
   return (
     <View style={styles.container}>
