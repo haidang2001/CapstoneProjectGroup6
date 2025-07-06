@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import LottieView from 'lottie-react-native';
-
+//you can animate your screen
 export default function AppSplashScreen({ onAnimationFinish }) {
   return (
     <View style={styles.container}>
