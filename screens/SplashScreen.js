@@ -29,4 +29,4 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
   },
-});
+}); # Adds empty line
