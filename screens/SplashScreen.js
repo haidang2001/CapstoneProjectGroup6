@@ -2,8 +2,6 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import LottieView from 'lottie-react-native';
 
-// Splash screen component with Lottie animation
-// Displays bus animation and calls callback when complete
 export default function AppSplashScreen({ onAnimationFinish }) {
   return (
     <View style={styles.container}>
@@ -29,4 +27,4 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
   },
-}); # Adds empty line
+});
