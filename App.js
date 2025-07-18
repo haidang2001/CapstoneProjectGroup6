@@ -11,6 +11,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import RouteMapScreen from './screens/RouteMapScreen';
+import { ThemeProvider } from './ThemeContext';
 
 const Stack = createStackNavigator();
 // Prevent native splash screen from auto-hiding
@@ -42,45 +43,47 @@ export default function App() {
     );
   }
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen 
-          name="Home" 
-          component={HomeScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="Route" 
-          component={RouteScreen}
-          options={{ title: 'Route Search' }}
-        />
-        <Stack.Screen 
-          name="RouteMap" 
-          component={RouteMapScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="FavoriteStops" 
-          component={FavoriteStopsScreen}
-          options={{ title: 'Favorite Stops' }}
-        />
-        <Stack.Screen 
-          name="LiveBusMap" 
-          component={LiveBusMapScreen}
-          options={{ title: 'Live Bus Map' }}
-        />
-        <Stack.Screen 
-          name="Settings" 
-          component={SettingsScreen}
-          options={{ title: 'Settings' }}
-        />
-        <Stack.Screen 
-          name="Feedback" 
-          component={FeedbackScreen}
-          options={{ title: 'Feedback' }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <ThemeProvider>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName="Home">
+          <Stack.Screen 
+            name="Home" 
+            component={HomeScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="Route" 
+            component={RouteScreen}
+            options={{ title: 'Route Search' }}
+          />
+          <Stack.Screen 
+            name="RouteMap" 
+            component={RouteMapScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="FavoriteStops" 
+            component={FavoriteStopsScreen}
+            options={{ title: 'Favorite Stops' }}
+          />
+          <Stack.Screen 
+            name="LiveBusMap" 
+            component={LiveBusMapScreen}
+            options={{ title: 'Live Bus Map' }}
+          />
+          <Stack.Screen 
+            name="Settings" 
+            component={SettingsScreen}
+            options={{ title: 'Settings' }}
+          />
+          <Stack.Screen 
+            name="Feedback" 
+            component={FeedbackScreen}
+            options={{ title: 'Feedback' }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ThemeProvider>
   );
 }
 
