@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions, Alert, Image } from 'react-native';
 import MapView, { Marker, Polyline, Callout } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,10 +8,12 @@ import stopTimes from '../assets/stop_times.json';
 import stops from '../assets/stops.json';
 import shapes from '../assets/shapes.json';
 import { Platform } from 'react-native';
+import { ThemeContext } from '../ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function RouteMapScreen({ route, navigation }) {
+  const { theme } = useContext(ThemeContext);
   const { routeId } = route.params;
   const [routeData, setRouteData] = useState(null);
   const [routeStops, setRouteStops] = useState([]);
@@ -97,8 +99,8 @@ export default function RouteMapScreen({ route, navigation }) {
 
   if (loading || !routeData) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#007bff" />
+      <View style={[styles.centered, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.button} />
       </View>
     );
   }
@@ -111,16 +113,16 @@ export default function RouteMapScreen({ route, navigation }) {
   );
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Header */}
-      <View style={styles.header}>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      {/* Header - always light */}
+      <View style={[styles.header, { backgroundColor: '#f5f5f5' }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={28} color="#222" />
         </TouchableOpacity>
-        <View style={[styles.circle, { backgroundColor: `#${routeData.color}` }]}> 
-          <Text style={styles.circleText}>{parseInt(routeData.id, 10)}</Text>
+        <View style={[styles.circle, { backgroundColor: `#${routeData.color}` }]}>
+          <Text style={[styles.circleText, { color: '#222' }]}>{parseInt(routeData.id, 10)}</Text>
         </View>
-        <Text style={styles.routeName} numberOfLines={1}>{routeData.longName}</Text>
+        <Text style={[styles.routeName, { color: '#222' }]} numberOfLines={1}>{routeData.longName}</Text>
       </View>
       {/* Map */}
       <MapView
@@ -176,14 +178,14 @@ export default function RouteMapScreen({ route, navigation }) {
       </MapView>
       {/* Floating Refresh Button */}
       <TouchableOpacity
-        style={styles.floatingRefresh}
+        style={[styles.floatingRefresh, { backgroundColor: theme.button }]}
         onPress={fetchBusPositions}
         disabled={refreshing}
       >
         {refreshing ? (
-          <ActivityIndicator size="small" color="#fff" />
+          <ActivityIndicator size="small" color={theme.buttonText} />
         ) : (
-          <Ionicons name="refresh" size={28} color="#fff" />
+          <Ionicons name="refresh" size={28} color={theme.buttonText} />
         )}
       </TouchableOpacity>
     </View>

@@ -1,12 +1,14 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import stops from '../assets/stops.json';
 import BottomNav from '../components/BottomNav';
 import { MaterialIcons } from '@expo/vector-icons';
+import { ThemeContext } from '../ThemeContext';
 
 export default function FavoriteStopsScreen({ navigation }) {
+  const { theme } = useContext(ThemeContext);
   const [favoriteStops, setFavoriteStops] = useState([]);
 
   const loadFavorites = useCallback(async () => {
@@ -34,19 +36,19 @@ export default function FavoriteStopsScreen({ navigation }) {
   const favoriteStopObjs = stops.filter(stop => favoriteStops.includes(stop.stop_id));
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* <Text style={styles.title}>Favorite Stops</Text> */}
       {favoriteStopObjs.length === 0 ? (
-        <Text style={styles.emptyText}>No favorite stops yet.</Text>
+        <Text style={[styles.emptyText, { color: theme.text }]}>No favorite stops yet.</Text>
       ) : (
         <FlatList
           data={favoriteStopObjs}
           keyExtractor={item => item.stop_id}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => navigation.navigate('LiveBusMap', { stop: item })}>
-              <View style={styles.stopRow}>
+              <View style={[styles.stopRow, { backgroundColor: theme.card }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.stopName}>{item.name}</Text>
+                  <Text style={[styles.stopName, { color: theme.text }]}>{item.name}</Text>
                 </View>
                 <TouchableOpacity onPress={() => removeFavorite(item.stop_id)}>
                   <MaterialIcons name="delete" size={24} color="#d00" />

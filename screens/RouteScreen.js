@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity } from 'react-native';
 import BottomNav from '../components/BottomNav';
+import { ThemeContext } from '../ThemeContext';
 
 const routes = require('../assets/routes.json');
 
 export default function RouteScreen({ navigation }) {
+  const { theme } = useContext(ThemeContext);
   const [search, setSearch] = useState('');
 
   const filteredRoutes = routes.filter(route =>
@@ -13,24 +15,25 @@ export default function RouteScreen({ navigation }) {
   );
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.routeItem} onPress={() => navigation.navigate('RouteMap', { routeId: item.id })}>
+    <TouchableOpacity style={[styles.routeItem, { backgroundColor: theme.card }]}
+      onPress={() => navigation.navigate('RouteMap', { routeId: item.id })}>
       <View style={[styles.circle, { backgroundColor: `#${item.color}` }]}> 
-        <Text style={styles.circleText}>{parseInt(item.id, 10)}</Text>
+        <Text style={[styles.circleText, { color: theme.text }]}>{parseInt(item.id, 10)}</Text>
       </View>
       <View style={styles.routeInfo}>
-        <Text style={styles.routeName}>{item.longName}</Text>
+        <Text style={[styles.routeName, { color: theme.text }]}>{item.longName}</Text>
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <TextInput
-        style={styles.searchBar}
+        style={[styles.searchBar, { backgroundColor: theme.card, color: theme.text }]}
         placeholder="Search Route"
         value={search}
         onChangeText={setSearch}
-        placeholderTextColor="#8E9BAE"
+        placeholderTextColor={theme.background === '#181818' ? '#fff' : '#8E9BAE'}
       />
       <FlatList
         data={filteredRoutes}
