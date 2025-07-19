@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
 import {
   View,
   StyleSheet,
@@ -16,8 +16,11 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import stops from "../assets/stops.json";
 import { ensureRecentData, getCachedArrivals } from "../services/arrivalTimes";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ThemeContext } from '../ThemeContext';
+import darkMapStyle from '../assets/darkMapStyle.json';
 
 export default function LiveBusMapScreen({ route, navigation }) {
+  const { theme } = useContext(ThemeContext);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
   const [error, setError] = useState("");
@@ -205,8 +208,8 @@ export default function LiveBusMapScreen({ route, navigation }) {
 
   if (error) {
     return (
-      <View style={styles.centeredContainer}>
-        <Text style={styles.errorText}>{error}</Text>
+      <View style={[styles.centeredContainer, { backgroundColor: theme.background }]}> 
+        <Text style={[styles.errorText, { color: theme.text }]}>{error}</Text>
         <TouchableOpacity
           style={styles.retryButton}
           onPress={fetchLocationAndNearbyStops}
@@ -216,25 +219,22 @@ export default function LiveBusMapScreen({ route, navigation }) {
       </View>
     );
   }
-
   if (!userLocation) {
     return (
-      <View style={styles.centeredContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Getting your location...</Text>
+      <View style={[styles.centeredContainer, { backgroundColor: theme.background }]}> 
+        <ActivityIndicator size="large" color={theme.button} />
+        <Text style={[styles.loadingText, { color: theme.text }]}>Getting your location...</Text>
       </View>
     );
   }
-
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}> 
       {/* Last Updated Timestamp */}
-      <Animated.View style={[styles.timestampContainer, { opacity: fadeAnim }]}>
-        <Ionicons name="time-outline" size={16} color="white" />
-        <Text style={styles.timestampText}>Updated: {lastUpdated}</Text>
-        {isRefreshing && <ActivityIndicator size="small" color="white" style={styles.refreshSpinner} />}
+      <Animated.View style={[styles.timestampContainer, { opacity: fadeAnim, backgroundColor: theme.card }]}> 
+        <Ionicons name="time-outline" size={16} color={theme.text} />
+        <Text style={[styles.timestampText, { color: theme.text }]}>Updated: {lastUpdated}</Text>
+        {isRefreshing && <ActivityIndicator size="small" color={theme.text} style={styles.refreshSpinner} />}
       </Animated.View>
-
       {/* Map View */}
       <MapView
         ref={mapRef}
@@ -245,6 +245,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
           latitudeDelta: 0.02,
           longitudeDelta: 0.02,
         }}
+        customMapStyle={darkMapStyle} // Force dark style for testing
         showsUserLocation
         showsMyLocationButton={false}
         zoomEnabled
@@ -278,10 +279,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
             ]} />
           </Marker>
         ))}
-        {/* Bus Markers */}
-        {/* Remove bus position state, fetch, and markers */}
       </MapView>
-
       {/* Stop Info Modal */}
       <Modal
         visible={modalVisible}
@@ -292,12 +290,10 @@ export default function LiveBusMapScreen({ route, navigation }) {
         <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
+              <View style={[styles.modalContent, { backgroundColor: theme.card }]}> 
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                   {/* Arrival Times Section */}
-                  <Text style={styles.modalTitle}>
-                    Arrival Times for {selectedStop?.name}
-                  </Text>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>Arrival Times for {selectedStop?.name}</Text>
                   {selectedStop && (
                     <TouchableOpacity onPress={() => toggleFavorite(selectedStop)}>
                       <MaterialIcons
@@ -308,22 +304,20 @@ export default function LiveBusMapScreen({ route, navigation }) {
                     </TouchableOpacity>
                   )}
                 </View>
-
                 {selectedStop?.arrivals ? (
                   selectedStop.arrivals.length > 0 ? (
                     selectedStop.arrivals.map((arrival, index) => (
-                      <Text key={index}>
+                      <Text key={index} style={{ color: theme.text }}>
                         🚌 Route {arrival.route} → {arrival.time} (
                         {arrival.inMinutes} min)
                       </Text>
                     ))
                   ) : (
-                    <Text>No upcoming buses in the next hour.</Text>
+                    <Text style={{ color: theme.text }}>No upcoming buses in the next hour.</Text>
                   )
                 ) : (
-                  <ActivityIndicator size="small" color="#007bff" />
+                  <ActivityIndicator size="small" color={theme.button} />
                 )}
-
                 <View style={styles.modalButtons}>
                   <TouchableOpacity 
                     style={styles.refreshButton}
@@ -333,13 +327,12 @@ export default function LiveBusMapScreen({ route, navigation }) {
                     <Ionicons 
                       name="refresh" 
                       size={20} 
-                      color={isRefreshing ? "#aaa" : "#007AFF"} 
+                      color={isRefreshing ? "#aaa" : theme.button} 
                     />
-                    <Text style={styles.refreshButtonText}>Refresh</Text>
+                    <Text style={[styles.refreshButtonText, { color: theme.button }]}>Refresh</Text>
                   </TouchableOpacity>
-                  
                   <TouchableOpacity onPress={() => setModalVisible(false)}>
-                    <Text style={styles.closeButtonText}>Close</Text>
+                    <Text style={{ color: theme.button }}>Close</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -347,30 +340,16 @@ export default function LiveBusMapScreen({ route, navigation }) {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
       {/* Current Location Button */}
       <TouchableOpacity
-        style={styles.locateButton}
+        style={[styles.locateButton, { backgroundColor: theme.button }]}
         onPress={() => {
           navigation.setParams({ stop: null });
           fetchLocationAndNearbyStops();
         }}
       >
-        <MaterialIcons name="my-location" size={24} color="white" />
+        <MaterialIcons name="my-location" size={24} color={theme.buttonText} />
       </TouchableOpacity>
-
-      {/* Refresh Button */}
-      {/* <TouchableOpacity
-        style={styles.floatingRefresh}
-        onPress={handleRefresh}
-        disabled={isRefreshing}
-      >
-        <Ionicons 
-          name="refresh" 
-          size={24} 
-          color={isRefreshing ? "#aaa" : "white"} 
-        />
-      </TouchableOpacity> */}
     </View>
   );
 }

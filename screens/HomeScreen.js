@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Image, ScrollView } from 'react-native';
 import BottomNav from '../components/BottomNav';
+import { ThemeContext } from '../ThemeContext';
 
 const cardData = [
   {
@@ -24,24 +25,27 @@ const cardData = [
 ];
 
 export default function HomeScreen({ navigation }) {
+  const { theme } = useContext(ThemeContext);
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>TransitPal</Text>
-        <Text style={styles.subtitle}>Your personal transit assistant.</Text>
+        <Text style={[styles.title, { color: theme.text }]}>TransitPal</Text>
+        <Text style={[styles.subtitle, { color: theme.text }]}>
+          Your personal transit assistant.
+        </Text>
         <View style={styles.cardsContainer}>
           {cardData.map((card, idx) => (
             <TouchableOpacity
               key={card.title}
-              style={styles.card}
+              style={[styles.card, { backgroundColor: theme.card }]}
               onPress={() => navigation.navigate(card.onPress)}
               activeOpacity={0.8}
             >
               <View style={styles.cardTextContainer}>
-                <Text style={styles.cardTitle}>{card.title}</Text>
-                <Text style={styles.cardDesc}>{card.description}</Text>
+                <Text style={[styles.cardTitle, { color: theme.text }]}>{card.title}</Text>
+                <Text style={[styles.cardDesc, { color: theme.text }]}>{card.description}</Text>
               </View>
-              <Image source={card.image}  style={styles.cardImage} />
+              <Image source={card.image} style={styles.cardImage} />
             </TouchableOpacity>
           ))}
         </View>

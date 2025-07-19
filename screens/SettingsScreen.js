@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput, Modal } from 'react-native';
 import BottomNav from '../components/BottomNav';
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
+import { ThemeContext } from '../ThemeContext';
 
 export default function SettingsScreen({ navigation }) {
+  const { theme, toggleTheme } = useContext(ThemeContext);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -30,10 +32,14 @@ export default function SettingsScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Feedback Button */}
-      <TouchableOpacity style={styles.feedbackButton} onPress={() => setModalVisible(true)}>
-        <Text style={styles.feedbackButtonText}>Feedback</Text>
+      <TouchableOpacity style={[styles.feedbackButton, { backgroundColor: theme.button }]} onPress={() => setModalVisible(true)}>
+        <Text style={[styles.feedbackButtonText, { color: theme.buttonText }]}>Feedback</Text>
+      </TouchableOpacity>
+      {/* Dark Mode Toggle Button */}
+      <TouchableOpacity style={[styles.feedbackButton, { backgroundColor: theme.button }]} onPress={toggleTheme}>
+        <Text style={[styles.feedbackButtonText, { color: theme.buttonText }]}>Toggle Dark Mode</Text>
       </TouchableOpacity>
       {/* Feedback Modal */}
       <Modal
@@ -43,30 +49,31 @@ export default function SettingsScreen({ navigation }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
             {/* Close button in top right */}
             <TouchableOpacity
               style={styles.closeIconButton}
               onPress={() => setModalVisible(false)}
               disabled={sending}
             >
-              <Ionicons name="close" size={28} color="#333" />
+              <Ionicons name="close" size={28} color={theme.text} />
             </TouchableOpacity>
-            <Text style={styles.feedbackLabel}>Your Feedback</Text>
+            <Text style={[styles.feedbackLabel, { color: theme.text }]}>Your Feedback</Text>
             <TextInput
-              style={styles.feedbackInput}
+              style={[styles.feedbackInput, { color: theme.text, backgroundColor: theme.background }]}
               placeholder="Type your feedback here"
+              placeholderTextColor={theme.text + '99'}
               value={message}
               onChangeText={setMessage}
               multiline
               editable={!sending}
             />
             <TouchableOpacity
-              style={styles.feedbackButton}
+              style={[styles.feedbackButton, { backgroundColor: theme.button }]}
               onPress={sendFeedback}
               disabled={sending}
             >
-              <Text style={styles.feedbackButtonText}>{sending ? 'Sending...' : 'Send'}</Text>
+              <Text style={[styles.feedbackButtonText, { color: theme.buttonText }]}>{sending ? 'Sending...' : 'Send'}</Text>
             </TouchableOpacity>
           </View>
         </View>

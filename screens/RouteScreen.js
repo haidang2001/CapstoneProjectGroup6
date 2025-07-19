@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity } from 'react-native';
 import BottomNav from '../components/BottomNav';
-import { addToRecentStops } from '../services/recentStops'; // ✅ Import added
+import { addToRecentStops } from '../services/recentStops'; // ✅ Keep this
+import { ThemeContext } from '../ThemeContext'; // ✅ Also keep this
 
 const routes = require('../assets/routes.json');
 
 export default function RouteScreen({ navigation }) {
+  const { theme } = useContext(ThemeContext);
   const [search, setSearch] = useState('');
 
   const filteredRoutes = routes.filter(route =>
@@ -15,29 +17,29 @@ export default function RouteScreen({ navigation }) {
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
-      style={styles.routeItem}
+      style={[styles.routeItem, { backgroundColor: theme.card }]}
       onPress={() => {
-        addToRecentStops(item); // ✅ Save to recent
+        addToRecentStops(item); // ✅ Track recently viewed stop
         navigation.navigate('RouteMap', { routeId: item.id });
       }}
     >
       <View style={[styles.circle, { backgroundColor: `#${item.color}` }]}>
-        <Text style={styles.circleText}>{parseInt(item.id, 10)}</Text>
+        <Text style={[styles.circleText, { color: theme.text }]}>{parseInt(item.id, 10)}</Text>
       </View>
       <View style={styles.routeInfo}>
-        <Text style={styles.routeName}>{item.longName}</Text>
+        <Text style={[styles.routeName, { color: theme.text }]}>{item.longName}</Text>
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <TextInput
-        style={styles.searchBar}
+        style={[styles.searchBar, { backgroundColor: theme.card, color: theme.text }]}
         placeholder="Search Route"
         value={search}
         onChangeText={setSearch}
-        placeholderTextColor="#8E9BAE"
+        placeholderTextColor={theme.background === '#181818' ? '#fff' : '#8E9BAE'}
       />
       <FlatList
         data={filteredRoutes}
@@ -53,18 +55,15 @@ export default function RouteScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafcff',
   },
   searchBar: {
     marginTop: 50,
     marginHorizontal: 16,
     marginBottom: 8,
     borderRadius: 20,
-    backgroundColor: '#f0f4f8',
     paddingHorizontal: 20,
     paddingVertical: 12,
     fontSize: 18,
-    color: '#222',
   },
   listContent: {
     paddingBottom: 80,
@@ -72,7 +71,6 @@ const styles = StyleSheet.create({
   routeItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     marginHorizontal: 12,
     marginVertical: 6,
     borderRadius: 12,
@@ -92,7 +90,6 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   circleText: {
-    color: '#fff',
     fontWeight: 'bold',
     fontSize: 22,
   },
@@ -102,6 +99,5 @@ const styles = StyleSheet.create({
   routeName: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#222',
   },
 });
