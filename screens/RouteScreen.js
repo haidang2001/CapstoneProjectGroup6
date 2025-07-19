@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity } from 'react-native';
 import BottomNav from '../components/BottomNav';
+import { addToRecentStops } from '../services/recentStops'; // ✅ Import added
 
 const routes = require('../assets/routes.json');
 
@@ -13,8 +14,14 @@ export default function RouteScreen({ navigation }) {
   );
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.routeItem} onPress={() => navigation.navigate('RouteMap', { routeId: item.id })}>
-      <View style={[styles.circle, { backgroundColor: `#${item.color}` }]}> 
+    <TouchableOpacity
+      style={styles.routeItem}
+      onPress={() => {
+        addToRecentStops(item); // ✅ Save to recent
+        navigation.navigate('RouteMap', { routeId: item.id });
+      }}
+    >
+      <View style={[styles.circle, { backgroundColor: `#${item.color}` }]}>
         <Text style={styles.circleText}>{parseInt(item.id, 10)}</Text>
       </View>
       <View style={styles.routeInfo}>
@@ -97,4 +104,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#222',
   },
-}); 
+});

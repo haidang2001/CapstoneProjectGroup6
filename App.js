@@ -7,22 +7,21 @@ import FavoriteStopsScreen from './screens/FavoriteStopsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import FeedbackScreen from './screens/FeedbackScreen';
 import SplashScreenComponent from './screens/SplashScreen';
+import RouteMapScreen from './screens/RouteMapScreen';
+import RecentlyViewedStopsScreen from './screens/RecentlyViewedStopsScreen'; // ✅ NEW IMPORT
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
-import RouteMapScreen from './screens/RouteMapScreen';
+import { StyleSheet, View } from 'react-native';
 
 const Stack = createStackNavigator();
-// Prevent native splash screen from auto-hiding
-// SplashScreen.preventAutoHideAsync();
+
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
 
   useEffect(() => {
     async function prepare() {
       try {
-        // Pre-load any resources (fonts, API calls, etc.)
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate loading
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (e) {
         console.warn(e);
       } finally {
@@ -41,6 +40,7 @@ export default function App() {
       </View>
     );
   }
+
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
@@ -78,6 +78,11 @@ export default function App() {
           name="Feedback" 
           component={FeedbackScreen}
           options={{ title: 'Feedback' }}
+        />
+        <Stack.Screen 
+          name="RecentStops" 
+          component={RecentlyViewedStopsScreen}
+          options={{ title: 'Recently Viewed Routes' }} // ✅ NEW SCREEN
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -6,6 +6,7 @@ const navItems = [
   { label: 'Route', icon: '🗂️', route: 'Route' },
   { label: 'Favorite', icon: '⭐', route: 'FavoriteStops' },
   { label: 'Maps', icon: '🗺️', route: 'LiveBusMap' },
+  { label: 'Recent', icon: '🕘', route: 'RecentStops' }, // ✅ Added
   { label: 'Setting', icon: '⚙️', route: 'Settings' },
 ];
 
@@ -60,4 +61,4 @@ const styles = StyleSheet.create({
     color: '#222',
     fontWeight: 'bold',
   },
-}); 
+});
