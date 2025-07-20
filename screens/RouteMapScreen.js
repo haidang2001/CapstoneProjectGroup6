@@ -7,6 +7,7 @@ import trips from '../assets/trips.json';
 import stopTimes from '../assets/stop_times.json';
 import stops from '../assets/stops.json';
 import shapes from '../assets/shapes.json';
+import darkMapStyle from '../assets/darkMapStyle.json';
 import { Platform } from 'react-native';
 import { ThemeContext } from '../ThemeContext';
 
@@ -133,6 +134,7 @@ export default function RouteMapScreen({ route, navigation }) {
           latitudeDelta: 0.02,
           longitudeDelta: 0.02,
         }}
+        customMapStyle={theme.background === '#181818' ? darkMapStyle : []}
         zoomEnabled={true}
         scrollEnabled={true}
       >

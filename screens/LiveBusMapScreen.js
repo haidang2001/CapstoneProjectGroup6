@@ -245,7 +245,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
           latitudeDelta: 0.02,
           longitudeDelta: 0.02,
         }}
-        customMapStyle={darkMapStyle} // Force dark style for testing
+        customMapStyle={theme.background === '#181818' ? darkMapStyle : []}
         showsUserLocation
         showsMyLocationButton={false}
         zoomEnabled
