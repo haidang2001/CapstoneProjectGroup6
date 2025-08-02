@@ -19,9 +19,10 @@ import { ensureRecentData, getCachedArrivals } from "../services/arrivalTimes";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemeContext } from "../ThemeContext";
 import darkMapStyle from "../assets/darkMapStyle.json";
-// import { reportStop, reportStopInUse } from "../services/firebaseReports";
-import { reportStopStatus, checkStopStatus } from "../services/firebaseReports";
 import {
+  reportStop,
+  reportStopInUse,
+  isStopPossiblyClosed,
   reportBusCrowded,
   getCrowdedReportCount,
 } from "../services/firebaseReports";
