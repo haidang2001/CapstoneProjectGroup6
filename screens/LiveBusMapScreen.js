@@ -15,9 +15,11 @@ import * as Location from "expo-location";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import stops from "../assets/stops.json";
 import { ensureRecentData, getCachedArrivals } from "../services/arrivalTimes";
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ThemeContext } from '../ThemeContext';
-import darkMapStyle from '../assets/darkMapStyle.json';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ThemeContext } from "../ThemeContext";
+import darkMapStyle from "../assets/darkMapStyle.json";
+// import { reportStop, reportStopInUse } from "../services/firebaseReports";
+import { reportStopStatus, checkStopStatus } from "../services/firebaseReports";
 
 export default function LiveBusMapScreen({ route, navigation }) {
   const { theme } = useContext(ThemeContext);
@@ -35,10 +37,19 @@ export default function LiveBusMapScreen({ route, navigation }) {
   // Remove bus position state, fetch, and markers
 
   const handleStopPress = async (stop) => {
-    setSelectedStop(null);
+    setSelectedStop({ ...stop, arrivals: [], status: "loading" });
     setModalVisible(true);
-    const arrivals = await fetchArrivalTimesForStop(stop.stop_id);
-    setSelectedStop({ ...stop, arrivals });
+
+    const [arrivals, status] = await Promise.all([
+      fetchArrivalTimesForStop(stop.stop_id),
+      checkStopStatus(stop.stop_id),
+    ]);
+
+    setSelectedStop((prev) => ({
+      ...prev,
+      arrivals,
+      status,
+    }));
   };
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -64,19 +75,32 @@ export default function LiveBusMapScreen({ route, navigation }) {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     Animated.sequence([
-      Animated.timing(fadeAnim, { toValue: 0.5, duration: 200, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(fadeAnim, {
+        toValue: 0.5,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
     ]).start();
 
     try {
       await ensureRecentData(true);
-      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      
+      setLastUpdated(
+        new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      );
+
       if (selectedStop) {
         const arrivals = await fetchArrivalTimesForStop(selectedStop.stop_id);
         setSelectedStop({ ...selectedStop, arrivals });
       }
-      
+
       if (!route.params?.stop) {
         await fetchLocationAndNearbyStops();
       }
@@ -90,12 +114,13 @@ export default function LiveBusMapScreen({ route, navigation }) {
 
   const fetchLocationAndNearbyStops = async () => {
     if (route.params?.stop) return;
-    
+
     setLoading(true);
     setError("");
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") throw new Error("Permission to access location was denied");
+      if (status !== "granted")
+        throw new Error("Permission to access location was denied");
 
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
@@ -129,7 +154,12 @@ export default function LiveBusMapScreen({ route, navigation }) {
       });
 
       setNearbyStops(filtered);
-      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setLastUpdated(
+        new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      );
     } catch (err) {
       setError(err.message);
       setUserLocation(null);
@@ -154,7 +184,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
   useEffect(() => {
     const loadFavorites = async () => {
       try {
-        const favs = await AsyncStorage.getItem('favoriteStops');
+        const favs = await AsyncStorage.getItem("favoriteStops");
         if (favs) setFavoriteStops(JSON.parse(favs));
       } catch {}
     };
@@ -168,11 +198,14 @@ export default function LiveBusMapScreen({ route, navigation }) {
         latitude: parseFloat(stopFromNav.lat),
         longitude: parseFloat(stopFromNav.lon),
       };
-      
+
       setUserLocation(region);
 
       if (mapRef.current) {
-        mapRef.current.animateToRegion({ ...region, latitudeDelta: 0.005, longitudeDelta: 0.005 }, 1000);
+        mapRef.current.animateToRegion(
+          { ...region, latitudeDelta: 0.005, longitudeDelta: 0.005 },
+          1000
+        );
       }
       handleStopPress(stopFromNav);
 
@@ -198,17 +231,25 @@ export default function LiveBusMapScreen({ route, navigation }) {
   const toggleFavorite = async (stop) => {
     let updatedFavorites;
     if (isFavorite(stop.stop_id)) {
-      updatedFavorites = favoriteStops.filter(id => id !== stop.stop_id);
+      updatedFavorites = favoriteStops.filter((id) => id !== stop.stop_id);
     } else {
       updatedFavorites = [...favoriteStops, stop.stop_id];
     }
     setFavoriteStops(updatedFavorites);
-    await AsyncStorage.setItem('favoriteStops', JSON.stringify(updatedFavorites));
+    await AsyncStorage.setItem(
+      "favoriteStops",
+      JSON.stringify(updatedFavorites)
+    );
   };
 
   if (error) {
     return (
-      <View style={[styles.centeredContainer, { backgroundColor: theme.background }]}> 
+      <View
+        style={[
+          styles.centeredContainer,
+          { backgroundColor: theme.background },
+        ]}
+      >
         <Text style={[styles.errorText, { color: theme.text }]}>{error}</Text>
         <TouchableOpacity
           style={styles.retryButton}
@@ -221,19 +262,39 @@ export default function LiveBusMapScreen({ route, navigation }) {
   }
   if (!userLocation) {
     return (
-      <View style={[styles.centeredContainer, { backgroundColor: theme.background }]}> 
+      <View
+        style={[
+          styles.centeredContainer,
+          { backgroundColor: theme.background },
+        ]}
+      >
         <ActivityIndicator size="large" color={theme.button} />
-        <Text style={[styles.loadingText, { color: theme.text }]}>Getting your location...</Text>
+        <Text style={[styles.loadingText, { color: theme.text }]}>
+          Getting your location...
+        </Text>
       </View>
     );
   }
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}> 
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Last Updated Timestamp */}
-      <Animated.View style={[styles.timestampContainer, { opacity: fadeAnim, backgroundColor: theme.card }]}> 
+      <Animated.View
+        style={[
+          styles.timestampContainer,
+          { opacity: fadeAnim, backgroundColor: theme.card },
+        ]}
+      >
         <Ionicons name="time-outline" size={16} color={theme.text} />
-        <Text style={[styles.timestampText, { color: theme.text }]}>Updated: {lastUpdated}</Text>
-        {isRefreshing && <ActivityIndicator size="small" color={theme.text} style={styles.refreshSpinner} />}
+        <Text style={[styles.timestampText, { color: theme.text }]}>
+          Updated: {lastUpdated}
+        </Text>
+        {isRefreshing && (
+          <ActivityIndicator
+            size="small"
+            color={theme.text}
+            style={styles.refreshSpinner}
+          />
+        )}
       </Animated.View>
       {/* Map View */}
       <MapView
@@ -245,7 +306,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
           latitudeDelta: 0.02,
           longitudeDelta: 0.02,
         }}
-        customMapStyle={theme.background === '#181818' ? darkMapStyle : []}
+        customMapStyle={theme.background === "#181818" ? darkMapStyle : []}
         showsUserLocation
         showsMyLocationButton={false}
         zoomEnabled
@@ -273,10 +334,12 @@ export default function LiveBusMapScreen({ route, navigation }) {
             title={stop.name}
             onPress={() => handleStopPress(stop)}
           >
-            <View style={[
-              styles.stopMarker,
-              { backgroundColor: isFavorite(stop.stop_id) ? 'red' : 'green' }
-            ]} />
+            <View
+              style={[
+                styles.stopMarker,
+                { backgroundColor: isFavorite(stop.stop_id) ? "red" : "green" },
+              ]}
+            />
           </Marker>
         ))}
       </MapView>
@@ -290,20 +353,54 @@ export default function LiveBusMapScreen({ route, navigation }) {
         <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View style={[styles.modalContent, { backgroundColor: theme.card }]}> 
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                  {/* Arrival Times Section */}
-                  <Text style={[styles.modalTitle, { color: theme.text }]}>Arrival Times for {selectedStop?.name}</Text>
+              <View
+                style={[styles.modalContent, { backgroundColor: theme.card }]}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 10,
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>
+                    Arrival Times for {selectedStop?.name}
+                  </Text>
                   {selectedStop && (
-                    <TouchableOpacity onPress={() => toggleFavorite(selectedStop)}>
+                    <TouchableOpacity
+                      onPress={() => toggleFavorite(selectedStop)}
+                    >
                       <MaterialIcons
-                        name={isFavorite(selectedStop.stop_id) ? 'favorite' : 'favorite-border'}
+                        name={
+                          isFavorite(selectedStop.stop_id)
+                            ? "favorite"
+                            : "favorite-border"
+                        }
                         size={28}
-                        color={isFavorite(selectedStop.stop_id) ? 'red' : '#aaa'}
+                        color={
+                          isFavorite(selectedStop.stop_id) ? "red" : "#aaa"
+                        }
                       />
                     </TouchableOpacity>
                   )}
                 </View>
+
+                {/* 🚨 Stop Warning */}
+                {selectedStop?.status === "possiblyClosed" && (
+                  <Text
+                    style={{
+                      color: "orange",
+                      marginBottom: 8,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    ⚠️ This stop has been reported as possibly not in use by
+                    other users.
+                  </Text>
+                )}
+
+                {/* 🚌 Arrivals */}
                 {selectedStop?.arrivals ? (
                   selectedStop.arrivals.length > 0 ? (
                     selectedStop.arrivals.map((arrival, index) => (
@@ -313,23 +410,73 @@ export default function LiveBusMapScreen({ route, navigation }) {
                       </Text>
                     ))
                   ) : (
-                    <Text style={{ color: theme.text }}>No upcoming buses in the next hour.</Text>
+                    <Text style={{ color: theme.text }}>
+                      No upcoming buses in the next hour.
+                    </Text>
                   )
                 ) : (
                   <ActivityIndicator size="small" color={theme.button} />
                 )}
+
+                {/* 🧾 Reporting */}
+                <View style={{ marginTop: 20 }}>
+                  <Text
+                    style={{
+                      fontWeight: "bold",
+                      color: theme.text,
+                      marginBottom: 6,
+                    }}
+                  >
+                    Report Stop Status:
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      reportStopStatus(selectedStop?.stop_id, "notInUse")
+                    }
+                  >
+                    <Text style={{ color: "red", fontWeight: "bold" }}>
+                      Report Stop Not In Use
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      reportStopStatus(selectedStop?.stop_id, "inUse")
+                    }
+                  >
+                    <Text
+                      style={{
+                        color: "green",
+                        fontWeight: "bold",
+                        marginTop: 10,
+                      }}
+                    >
+                      Report Stop As In Use
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 🔄 Refresh + Close */}
                 <View style={styles.modalButtons}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.refreshButton}
                     onPress={handleRefresh}
                     disabled={isRefreshing}
                   >
-                    <Ionicons 
-                      name="refresh" 
-                      size={20} 
-                      color={isRefreshing ? "#aaa" : theme.button} 
+                    <Ionicons
+                      name="refresh"
+                      size={20}
+                      color={isRefreshing ? "#aaa" : theme.button}
                     />
-                    <Text style={[styles.refreshButtonText, { color: theme.button }]}>Refresh</Text>
+                    <Text
+                      style={[
+                        styles.refreshButtonText,
+                        { color: theme.button },
+                      ]}
+                    >
+                      Refresh
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => setModalVisible(false)}>
                     <Text style={{ color: theme.button }}>Close</Text>
@@ -362,20 +509,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timestampContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 50,
     left: 20,
     right: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: "rgba(0,0,0,0.7)",
     padding: 10,
     borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 1,
   },
   timestampText: {
-    color: 'white',
+    color: "white",
     marginLeft: 5,
     fontSize: 14,
   },
@@ -417,58 +564,58 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     flex: 1,
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 20,
   },
   refreshButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   refreshButtonText: {
-    color: '#007AFF',
+    color: "#007AFF",
     marginLeft: 8,
   },
   closeButtonText: {
-    color: 'blue',
+    color: "blue",
   },
   locateButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 30,
     right: 20,
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
     width: 50,
     height: 50,
     borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 5,
   },
   floatingRefresh: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 90,
     right: 20,
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
     width: 50,
     height: 50,
     borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 5,
   },
 });
