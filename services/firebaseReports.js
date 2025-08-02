@@ -1,56 +1,90 @@
-// firebaseReports.js
 import { db } from "./firebaseConfig";
 import {
-  doc,
-  setDoc,
-  getDoc,
+  collection,
+  addDoc,
   serverTimestamp,
+  setDoc,
+  doc,
   increment,
+  getDoc,
+  updateDoc,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 
-// You can change this value for demo purposes
-const THRESHOLD = 3;
-
-// Handles both reporting as "not in use" or "in use"
-export const reportStopStatus = async (stop_id, status) => {
+// Reports that a stop is not in use
+export const reportStop = async (stop_id) => {
+  const ref = doc(db, "stop_reports", stop_id);
   try {
-    const ref = doc(db, "stop_reports", stop_id);
-
-    const data = {
-      lastReported: serverTimestamp(),
-    };
-
-    if (status === "notInUse") {
-      data.notInUseCount = increment(1);
-    } else if (status === "inUse") {
-      data.notInUseCount = increment(-1);
-    }
-
-    await setDoc(ref, data, { merge: true });
-
-    alert(`✅ Stop reported as ${status === "notInUse" ? "not in use" : "in use"}`);
-  } catch (err) {
-    console.error("❌ Reporting error:", err);
+    await setDoc(
+      ref,
+      { count: increment(1), updated: serverTimestamp() },
+      { merge: true }
+    );
+    alert("✅ Stop reported as not in use.");
+  } catch (error) {
+    console.error("❌ Error reporting stop:", error);
     alert("Failed to report stop.");
   }
 };
 
-// Used to check if stop should be flagged in modal
-export const checkStopStatus = async (stop_id) => {
+// Decrements the not-in-use count
+export const reportStopInUse = async (stop_id) => {
+  const ref = doc(db, "stop_reports", stop_id);
   try {
-    const ref = doc(db, "stop_reports", stop_id);
+    await setDoc(
+      ref,
+      { count: increment(-1), updated: serverTimestamp() },
+      { merge: true }
+    );
+    alert("👍 Reported stop as in use.");
+  } catch (error) {
+    console.error("❌ Error reporting stop in use:", error);
+    alert("Failed to report.");
+  }
+};
+
+// Returns true if the stop has ≥ 3 reports
+export const isStopPossiblyClosed = async (stop_id) => {
+  const ref = doc(db, "stop_reports", stop_id);
+  try {
     const snapshot = await getDoc(ref);
-
-    if (snapshot.exists()) {
-      const data = snapshot.data();
-      if ((data.notInUseCount || 0) >= THRESHOLD) {
-        return "possiblyClosed";
-      }
-    }
-
-    return "active";
+    return snapshot.exists() && (snapshot.data().count || 0) >= 3;
   } catch (err) {
     console.error("❌ Error checking stop status:", err);
-    return "unknown";
+    return false;
+  }
+};
+
+// 🚨 NEW: Reports a bus (route+stop combo) as crowded
+export const reportBusCrowded = async (route_id, stop_id) => {
+  const reportId = `${route_id}_${stop_id}`;
+  const ref = doc(db, "crowded_buses", reportId);
+  try {
+    await setDoc(
+      ref,
+      { count: increment(1), updated: serverTimestamp() },
+      { merge: true }
+    );
+    alert("😬 Reported bus as crowded!");
+  } catch (err) {
+    console.error("❌ Error reporting crowded bus:", err);
+    alert("Failed to report crowding.");
+  }
+};
+
+export const getCrowdedReportCount = async (route_id, stop_id) => {
+  try {
+    const q = query(
+      collection(db, "bus_crowded_reports"),
+      where("route_id", "==", route_id),
+      where("stop_id", "==", stop_id)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.size; // number of crowded reports
+  } catch (error) {
+    console.error("❌ Error getting crowded report count:", error);
+    return 0;
   }
 };

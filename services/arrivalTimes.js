@@ -22,6 +22,7 @@ export const getCachedArrivals = (stopId) => {
 
   for (const entity of cachedData) {
     const trip = entity.trip_update?.trip;
+    const tripProps = entity.trip_update?.trip_properties;
     const stopUpdates = entity.trip_update?.stop_time_update || [];
 
     for (const stopUpdate of stopUpdates) {
@@ -31,6 +32,7 @@ export const getCachedArrivals = (stopId) => {
           const minutesUntil = Math.round((arrivalUnix - now) / 60);
           arrivals.push({
             route: trip?.route_id || "Unknown",
+            headsign: tripProps?.trip_headsign?.translation?.[0]?.text || "Unknown destination",
             time: new Date(arrivalUnix * 1000).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -50,4 +52,4 @@ export const ensureRecentData = async () => {
   if (now - lastFetchedTime > 60000) {
     await fetchAndCacheArrivals();
   }
-}
+};

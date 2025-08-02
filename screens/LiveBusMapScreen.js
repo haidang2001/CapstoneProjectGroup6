@@ -10,6 +10,7 @@ import {
   Animated,
   Image,
 } from "react-native";
+import { ScrollView } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
@@ -20,6 +21,10 @@ import { ThemeContext } from "../ThemeContext";
 import darkMapStyle from "../assets/darkMapStyle.json";
 // import { reportStop, reportStopInUse } from "../services/firebaseReports";
 import { reportStopStatus, checkStopStatus } from "../services/firebaseReports";
+import {
+  reportBusCrowded,
+  getCrowdedReportCount,
+} from "../services/firebaseReports";
 
 export default function LiveBusMapScreen({ route, navigation }) {
   const { theme } = useContext(ThemeContext);
@@ -32,24 +37,51 @@ export default function LiveBusMapScreen({ route, navigation }) {
   const [favoriteStops, setFavoriteStops] = useState([]);
   const [lastUpdated, setLastUpdated] = useState("Never refreshed");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [stopWarning, setStopWarning] = useState(false);
   const mapRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   // Remove bus position state, fetch, and markers
 
+  // const handleStopPress = async (stop) => {
+  //   setSelectedStop({ ...stop, arrivals: [], status: "loading" });
+  //   setModalVisible(true);
+
+  //   const [arrivals, status] = await Promise.all([
+  //     fetchArrivalTimesForStop(stop.stop_id),
+  //     checkStopStatus(stop.stop_id),
+  //   ]);
+
+  //   setSelectedStop((prev) => ({
+  //     ...prev,
+  //     arrivals,
+  //     status,
+  //   }));
+  // };
+
   const handleStopPress = async (stop) => {
-    setSelectedStop({ ...stop, arrivals: [], status: "loading" });
     setModalVisible(true);
+    setStopWarning(false); // reset warning first
+    setSelectedStop({ ...stop, arrivals: [], status: "loading" });
 
-    const [arrivals, status] = await Promise.all([
-      fetchArrivalTimesForStop(stop.stop_id),
-      checkStopStatus(stop.stop_id),
-    ]);
+    try {
+      const [arrivals, status] = await Promise.all([
+        fetchArrivalTimesForStop(stop.stop_id),
+        checkStopStatus(stop.stop_id),
+      ]);
 
-    setSelectedStop((prev) => ({
-      ...prev,
-      arrivals,
-      status,
-    }));
+      setSelectedStop({
+        ...stop,
+        arrivals,
+        status,
+      });
+
+      if (status.notInUseReports >= 3) {
+        setStopWarning(true);
+      }
+    } catch (error) {
+      console.error("Error loading stop info:", error);
+      setSelectedStop({ ...stop, arrivals: [], status: "error" });
+    }
   };
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -69,7 +101,19 @@ export default function LiveBusMapScreen({ route, navigation }) {
 
   const fetchArrivalTimesForStop = async (stopId) => {
     await ensureRecentData();
-    return getCachedArrivals(stopId);
+    const arrivals = await getCachedArrivals(stopId);
+
+    const enrichedArrivals = await Promise.all(
+      arrivals.map(async (arrival) => {
+        const crowdedCount = await getCrowdedReportCount(arrival.route, stopId);
+        return {
+          ...arrival,
+          crowded: crowdedCount >= 3,
+        };
+      })
+    );
+
+    return enrichedArrivals;
   };
 
   const handleRefresh = async () => {
@@ -356,6 +400,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
               <View
                 style={[styles.modalContent, { backgroundColor: theme.card }]}
               >
+                {/* Header: Stop Title + Favorite */}
                 <View
                   style={{
                     flexDirection: "row",
@@ -386,39 +431,129 @@ export default function LiveBusMapScreen({ route, navigation }) {
                   )}
                 </View>
 
-                {/* 🚨 Stop Warning */}
-                {selectedStop?.status === "possiblyClosed" && (
+                {/* ⚠️ Warning if reported not in use */}
+                {stopWarning && (
                   <Text
                     style={{
-                      color: "orange",
-                      marginBottom: 8,
+                      color: "red",
                       fontWeight: "bold",
+                      marginBottom: 10,
                     }}
                   >
-                    ⚠️ This stop has been reported as possibly not in use by
-                    other users.
+                    ⚠️ This stop is potentially not in use.
                   </Text>
                 )}
 
-                {/* 🚌 Arrivals */}
+                {/* 🚍 Arrival List */}
                 {selectedStop?.arrivals ? (
-                  selectedStop.arrivals.length > 0 ? (
-                    selectedStop.arrivals.map((arrival, index) => (
-                      <Text key={index} style={{ color: theme.text }}>
-                        🚌 Route {arrival.route} → {arrival.time} (
-                        {arrival.inMinutes} min)
+                  <ScrollView style={{ maxHeight: 300 }}>
+                    {selectedStop.arrivals.length > 0 ? (
+                      selectedStop.arrivals.map((arrival, index) => (
+                        <View
+                          key={index}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            backgroundColor: theme.card,
+                            paddingVertical: 10,
+                            paddingHorizontal: 10,
+                            borderBottomWidth: 0.5,
+                            borderBottomColor: "#ccc",
+                            borderRadius: 8,
+                            marginBottom: 6,
+                          }}
+                        >
+                          {/* Left: Route Number */}
+                          <Text
+                            style={{
+                              fontWeight: "bold",
+                              color: theme.text,
+                              fontSize: 16,
+                              width: 50,
+                            }}
+                          >
+                            {arrival.route}
+                          </Text>
+
+                          {/* Center: Destination + Info */}
+                          <View style={{ flex: 1, paddingHorizontal: 8 }}>
+                            <Text
+                              style={{
+                                color: theme.text,
+                                fontSize: 15,
+                                fontWeight: "600",
+                              }}
+                            >
+                              {arrival.headsign || "Bus Destination"}
+                            </Text>
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                marginTop: 2,
+                              }}
+                            >
+                              <Text style={{ color: "#4CAF50" }}>
+                                Next bus in {arrival.inMinutes} min
+                              </Text>
+                              {arrival.crowded && (
+                                <Text
+                                  style={{
+                                    color: "white",
+                                    backgroundColor: "red",
+                                    paddingHorizontal: 6,
+                                    paddingVertical: 2,
+                                    borderRadius: 4,
+                                    marginLeft: 8,
+                                    fontSize: 11,
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  Crowded
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+
+                          {/* Right: Report Crowded */}
+                          <TouchableOpacity
+                            onPress={() =>
+                              reportBusCrowded(
+                                arrival.route,
+                                selectedStop.stop_id
+                              )
+                            }
+                            style={{
+                              backgroundColor: "orange",
+                              paddingVertical: 6,
+                              paddingHorizontal: 12,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: "white",
+                                fontWeight: "bold",
+                                fontSize: 12,
+                              }}
+                            >
+                              Crowded
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={{ color: theme.text }}>
+                        No upcoming buses in the next hour.
                       </Text>
-                    ))
-                  ) : (
-                    <Text style={{ color: theme.text }}>
-                      No upcoming buses in the next hour.
-                    </Text>
-                  )
+                    )}
+                  </ScrollView>
                 ) : (
                   <ActivityIndicator size="small" color={theme.button} />
                 )}
 
-                {/* 🧾 Reporting */}
+                {/* 🧾 Stop Status Reporting */}
                 <View style={{ marginTop: 20 }}>
                   <Text
                     style={{
@@ -429,21 +564,15 @@ export default function LiveBusMapScreen({ route, navigation }) {
                   >
                     Report Stop Status:
                   </Text>
-
                   <TouchableOpacity
-                    onPress={() =>
-                      reportStopStatus(selectedStop?.stop_id, "notInUse")
-                    }
+                    onPress={() => reportStop(selectedStop?.stop_id)}
                   >
                     <Text style={{ color: "red", fontWeight: "bold" }}>
                       Report Stop Not In Use
                     </Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
-                    onPress={() =>
-                      reportStopStatus(selectedStop?.stop_id, "inUse")
-                    }
+                    onPress={() => reportStopInUse(selectedStop?.stop_id)}
                   >
                     <Text
                       style={{
@@ -457,7 +586,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
                   </TouchableOpacity>
                 </View>
 
-                {/* 🔄 Refresh + Close */}
+                {/* 🔁 Refresh + Close */}
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
                     style={styles.refreshButton}
