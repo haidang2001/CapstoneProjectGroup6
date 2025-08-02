@@ -10,7 +10,7 @@ import {
   Animated,
   Image,
 } from "react-native";
-import { ScrollView } from "react-native";
+import { ScrollView } from 'react-native';
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
@@ -42,46 +42,20 @@ export default function LiveBusMapScreen({ route, navigation }) {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   // Remove bus position state, fetch, and markers
 
-  // const handleStopPress = async (stop) => {
-  //   setSelectedStop({ ...stop, arrivals: [], status: "loading" });
-  //   setModalVisible(true);
-
-  //   const [arrivals, status] = await Promise.all([
-  //     fetchArrivalTimesForStop(stop.stop_id),
-  //     checkStopStatus(stop.stop_id),
-  //   ]);
-
-  //   setSelectedStop((prev) => ({
-  //     ...prev,
-  //     arrivals,
-  //     status,
-  //   }));
-  // };
-
   const handleStopPress = async (stop) => {
-    setModalVisible(true);
-    setStopWarning(false); // reset warning first
     setSelectedStop({ ...stop, arrivals: [], status: "loading" });
+    setModalVisible(true);
 
-    try {
-      const [arrivals, status] = await Promise.all([
-        fetchArrivalTimesForStop(stop.stop_id),
-        checkStopStatus(stop.stop_id),
-      ]);
+    const [arrivals, status] = await Promise.all([
+      fetchArrivalTimesForStop(stop.stop_id),
+      checkStopStatus(stop.stop_id),
+    ]);
 
-      setSelectedStop({
-        ...stop,
-        arrivals,
-        status,
-      });
-
-      if (status.notInUseReports >= 3) {
-        setStopWarning(true);
-      }
-    } catch (error) {
-      console.error("Error loading stop info:", error);
-      setSelectedStop({ ...stop, arrivals: [], status: "error" });
-    }
+    setSelectedStop((prev) => ({
+      ...prev,
+      arrivals,
+      status,
+    }));
   };
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
