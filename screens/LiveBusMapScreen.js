@@ -405,7 +405,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
                     </TouchableOpacity>
                   )}
                 </View>
-
+                  {/* code review*/}
                 {/* ⚠️ Warning if reported not in use */}
                 {stopWarning && (
                   <Text
@@ -546,6 +546,7 @@ export default function LiveBusMapScreen({ route, navigation }) {
                       Report Stop Not In Use
                     </Text>
                   </TouchableOpacity>
+                  
                   <TouchableOpacity
                     onPress={() => reportStopInUse(selectedStop?.stop_id)}
                   >
