@@ -1,5 +1,13 @@
-# CapstoneProjectGroup6
-Section 1 Group 6
+<p align="center">
+  <img width="250" alt="image" src="https://github.com/user-attachments/assets/1d6aefc9-00d7-4d82-85d9-c4a4856d45ee" />
+  <img width="250" alt="image" src="https://github.com/user-attachments/assets/538d7849-27a0-4b4c-a70b-a0efd31f80e9" />
+  <img width="250" alt="image" src="https://github.com/user-attachments/assets/74e9692f-df86-4de8-b609-77c00bde24af" />
+
+</p>
+
+<h1>TransitPal</h1>
+<h3>CapstoneProjectGroup6</h3>
+<h5>Section 1 Group 6</h5>
 
 Group Members:
 Cao Hai Dang Nguyen, github: haidang2001
